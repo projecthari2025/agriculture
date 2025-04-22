@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agri University - Mango Tree AI System</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  <style>
+    :root {
+      --color-primary: #2E7D32;
+      --color-secondary: #558B2F;
+      --color-accent: #AED581;
+      --color-light: #F1F8E9;
+      --color-dark: #1B5E20;
+      --color-text: #212121;
+      --color-background: #E8F5E9;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background-color: var(--color-background);
+      color: var(--color-text);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem 0;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: var(--color-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .tagline {
+      font-size: 1.1rem;
+      color: var(--color-secondary);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      padding-bottom: 2rem;
+    }
+
+    @media (min-width: 968px) {
+      main {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .camera-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .camera-container {
+      position: relative;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      background-color: #000;
+      aspect-ratio: 4/3;
+      margin-bottom: 1rem;
+    }
+
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #output-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .detection-info {
+      background: var(--color-light);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+
+    .person-count {
+      font-size: 1.25rem;
+      color: var(--color-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .mango-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .mango-image {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .mango-description {
+      line-height: 1.6;
+      color: var(--color-text);
+    }
+
+    .status-indicator {
+      background-color: var(--color-accent);
+      color: var(--color-dark);
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Agri University</h1>
+      <p class="tagline">Mango Tree AI Detection System</p>
+    </header>
+
+    <main>
+      <div class="camera-section">
+        <div class="status-indicator" id="status-indicator">Initializing system...</div>
+        <div class="camera-container">
+          <video id="webcam" autoplay muted playsinline></video>
+          <canvas id="output-canvas"></canvas>
+        </div>
+        <div class="detection-info">
+          <div class="person-count" id="person-count">People detected: 0</div>
+        </div>
+      </div>
+
+      <div class="mango-section">
+        <img src="https://images.pexels.com/photos/2363347/pexels-photo-2363347.jpeg" alt="Mango Tree" class="mango-image">
+        <div class="mango-description">
+          <h2>Alphonso Mango Tree</h2>
+          <p>The Alphonso mango tree is renowned for producing one of the most delicious and sought-after mango varieties in the world. These majestic trees can grow up to 30-40 feet tall and have a dense, rounded canopy that provides ample shade.</p>
+          <p>Key Features:</p>
+          <ul>
+            <li>Height: 30-40 feet when fully grown</li>
+            <li>Fruit Season: March to July</li>
+            <li>Fruit Color: Golden yellow when ripe</li>
+            <li>Nutritional Value: Rich in Vitamins A, C, and antioxidants</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    class PersonDetector {
+      constructor() {
+        this.video = document.getElementById('webcam');
+        this.canvas = document.getElementById('output-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.model = null;
+        this.isRunning = false;
+        this.personCount = 0;
+        this.lastPersonCount = 0;
+        this.audioPlaying = false;
+        
+        // Create audio context and message
+        this.mangoInfo = `The Alphonso mango tree produces sweet, aromatic fruits that are considered the king of mangoes. 
+                         These trees require warm climate and well-drained soil to thrive. 
+                         The fruits are rich in vitamins and minerals, making them both delicious and nutritious.`;
+      }
+
+      async initialize() {
+        try {
+          this.updateStatus('Loading AI model...');
+          this.model = await cocoSsd.load();
+          await this.setupCamera();
+          this.startDetection();
+          return true;
+        } catch (error) {
+          console.error('Error initializing:', error);
+          this.updateStatus('Error: ' + error.message);
+          return false;
+        }
+      }
+
+      async setupCamera() {
+        this.updateStatus('Requesting camera access...');
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+          audio: false
+        });
+        
+        this.video.srcObject = stream;
+        
+        return new Promise((resolve) => {
+          this.video.onloadedmetadata = () => {
+            this.canvas.width = this.video.videoWidth;
+            this.canvas.height = this.video.videoHeight;
+            this.updateStatus('System Ready');
+            resolve();
+          };
+        });
+      }
+
+      startDetection() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.detectFrame();
+      }
+
+      async detectFrame() {
+        if (!this.isRunning) return;
+        
+        try {
+          const predictions = await this.model.detect(this.video);
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          
+          this.personCount = predictions.filter(pred => pred.class === 'person').length;
+          this.updatePersonCount(this.personCount);
+          
+          predictions.forEach(prediction => {
+            if (prediction.class === 'person') {
+              this.drawBoundingBox(prediction.bbox);
+            }
+          });
+
+          // Handle audio based on person detection
+          if (this.personCount > 0 && !this.audioPlaying && this.personCount !== this.lastPersonCount) {
+            this.playMangoInfo();
+          }
+          
+          this.lastPersonCount = this.personCount;
+          requestAnimationFrame(() => this.detectFrame());
+        } catch (error) {
+          console.error('Detection error:', error);
+          this.updateStatus('Detection error');
+          setTimeout(() => this.detectFrame(), 1000);
+        }
+      }
+
+      drawBoundingBox(bbox) {
+        const [x, y, width, height] = bbox;
+        
+        this.ctx.strokeStyle = '#2E7D32';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x, y, width, height);
+        
+        this.ctx.fillStyle = 'rgba(46, 125, 50, 0.2)';
+        this.ctx.fillRect(x, y, width, height);
+      }
+
+      updateStatus(message) {
+        const statusElement = document.getElementById('status-indicator');
+        if (statusElement) {
+          statusElement.textContent = message;
+        }
+      }
+
+      updatePersonCount(count) {
+        const countElement = document.getElementById('person-count');
+        if (countElement) {
+          countElement.textContent = `People detected: ${count}`;
+        }
+      }
+
+      playMangoInfo() {
+        if (this.audioPlaying) return;
+        
+        this.audioPlaying = true;
+        const utterance = new SpeechSynthesisUtterance(this.mangoInfo);
+        
+        utterance.onend = () => {
+          this.audioPlaying = false;
+        };
+        
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    // Initialize the system when the page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      const detector = new PersonDetector();
+      await detector.initialize();
+    });
+  </script>
+</body>
+</html>
