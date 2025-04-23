@@ -108,6 +108,21 @@
       font-size: 1.25rem;
       color: var(--color-primary);
       margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .detection-status {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #dc3545;
+    }
+
+    .detection-status.active {
+      background-color: #28a745;
     }
 
     .mango-section {
@@ -117,12 +132,46 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    .mango-image {
+    .image-slider {
+      position: relative;
       width: 100%;
       height: 300px;
-      object-fit: cover;
+      overflow: hidden;
       border-radius: 8px;
       margin-bottom: 1rem;
+    }
+
+    .slider-images {
+      display: flex;
+      transition: transform 0.5s ease-in-out;
+      height: 100%;
+    }
+
+    .slider-images img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .slider-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .slider-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--color-accent);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .slider-dot.active {
+      background-color: var(--color-primary);
     }
 
     .mango-description {
@@ -155,12 +204,23 @@
           <canvas id="output-canvas"></canvas>
         </div>
         <div class="detection-info">
-          <div class="person-count" id="person-count">People detected: 0</div>
+          <div class="person-count">
+            <span class="detection-status" id="detection-status"></span>
+            <span id="person-count">No person detected</span>
+          </div>
         </div>
+        <audio id="mangoAudio" src="mango-info.mp3"></audio>
       </div>
 
       <div class="mango-section">
-        <img src="https://images.pexels.com/photos/2363347/pexels-photo-2363347.jpeg" alt="Mango Tree" class="mango-image">
+        <div class="image-slider">
+          <div class="slider-images" id="slider-images">
+            <img src="https://images.pexels.com/photos/2363347/pexels-photo-2363347.jpeg" alt="Mango Tree">
+            <img src="https://images.pexels.com/photos/6157056/pexels-photo-6157056.jpeg" alt="Mango Fruits">
+            <img src="https://images.pexels.com/photos/918643/pexels-photo-918643.jpeg" alt="Mango Farm">
+          </div>
+        </div>
+        <div class="slider-nav" id="slider-nav"></div>
         <div class="mango-description">
           <h2>Alphonso Mango Tree</h2>
           <p>The Alphonso mango tree is renowned for producing one of the most delicious and sought-after mango varieties in the world. These majestic trees can grow up to 30-40 feet tall and have a dense, rounded canopy that provides ample shade.</p>
@@ -177,6 +237,48 @@
   </div>
 
   <script>
+    class ImageSlider {
+      constructor() {
+        this.currentSlide = 0;
+        this.sliderImages = document.getElementById('slider-images');
+        this.images = this.sliderImages.getElementsByTagName('img');
+        this.createNavDots();
+        this.startAutoSlide();
+      }
+
+      createNavDots() {
+        const nav = document.getElementById('slider-nav');
+        for (let i = 0; i < this.images.length; i++) {
+          const dot = document.createElement('div');
+          dot.className = `slider-dot ${i === 0 ? 'active' : ''}`;
+          dot.addEventListener('click', () => this.goToSlide(i));
+          nav.appendChild(dot);
+        }
+      }
+
+      goToSlide(index) {
+        this.currentSlide = index;
+        this.sliderImages.style.transform = `translateX(-${index * 100}%)`;
+        this.updateDots();
+      }
+
+      updateDots() {
+        const dots = document.getElementsByClassName('slider-dot');
+        Array.from(dots).forEach((dot, index) => {
+          dot.classList.toggle('active', index === this.currentSlide);
+        });
+      }
+
+      nextSlide() {
+        this.currentSlide = (this.currentSlide + 1) % this.images.length;
+        this.goToSlide(this.currentSlide);
+      }
+
+      startAutoSlide() {
+        setInterval(() => this.nextSlide(), 5000);
+      }
+    }
+
     class PersonDetector {
       constructor() {
         this.video = document.getElementById('webcam');
@@ -187,11 +289,12 @@
         this.personCount = 0;
         this.lastPersonCount = 0;
         this.audioPlaying = false;
+        this.audio = document.getElementById('mangoAudio');
         
-        // Create audio context and message
-        this.mangoInfo = `The Alphonso mango tree produces sweet, aromatic fruits that are considered the king of mangoes. 
-                         These trees require warm climate and well-drained soil to thrive. 
-                         The fruits are rich in vitamins and minerals, making them both delicious and nutritious.`;
+        // Add event listener for audio ended
+        this.audio.addEventListener('ended', () => {
+          this.audioPlaying = false;
+        });
       }
 
       async initialize() {
@@ -250,7 +353,6 @@
             }
           });
 
-          // Handle audio based on person detection
           if (this.personCount > 0 && !this.audioPlaying && this.personCount !== this.lastPersonCount) {
             this.playMangoInfo();
           }
@@ -284,8 +386,14 @@
 
       updatePersonCount(count) {
         const countElement = document.getElementById('person-count');
+        const statusElement = document.getElementById('detection-status');
+        
         if (countElement) {
-          countElement.textContent = `People detected: ${count}`;
+          countElement.textContent = count > 0 ? `People detected: ${count}` : 'No person detected';
+        }
+        
+        if (statusElement) {
+          statusElement.classList.toggle('active', count > 0);
         }
       }
 
@@ -293,19 +401,17 @@
         if (this.audioPlaying) return;
         
         this.audioPlaying = true;
-        const utterance = new SpeechSynthesisUtterance(this.mangoInfo);
-        
-        utterance.onend = () => {
+        this.audio.currentTime = 0; // Reset audio to start
+        this.audio.play().catch(error => {
+          console.error('Error playing audio:', error);
           this.audioPlaying = false;
-        };
-        
-        window.speechSynthesis.speak(utterance);
+        });
       }
     }
 
-    // Initialize the system when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
       const detector = new PersonDetector();
+      const slider = new ImageSlider();
       await detector.initialize();
     });
   </script>
