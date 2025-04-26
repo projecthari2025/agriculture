@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Madhuram malabar</title>
+  <title>Madhuram Malabar</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
   <style>
@@ -15,6 +15,8 @@
       --color-dark: #1B5E20;
       --color-text: #212121;
       --color-background: #E8F5E9;
+      --color-error: #D32F2F;
+      --color-success: #388E3C;
     }
 
     * {
@@ -24,52 +26,101 @@
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: var(--color-background);
       color: var(--color-text);
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 900px;
+      width: 100%;
       margin: 0 auto;
       padding: 2rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
     header {
       text-align: center;
-      padding: 2rem 0;
+      padding: 1.5rem 0;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 3px;
+      background-color: var(--color-primary);
+      border-radius: 3px;
     }
 
     h1 {
       font-size: 2.5rem;
       color: var(--color-primary);
       margin-bottom: 0.5rem;
+      letter-spacing: -0.5px;
     }
 
     .tagline {
       font-size: 1.1rem;
       color: var(--color-secondary);
+      font-weight: 500;
     }
 
     main {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 2rem;
-      padding-bottom: 2rem;
-    }
-
-    @media (min-width: 968px) {
-      main {
-        grid-template-columns: 1fr 1fr;
-      }
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
     .camera-section {
       background: white;
       padding: 1.5rem;
       border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .status-indicator {
+      background-color: var(--color-accent);
+      color: var(--color-dark);
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      font-weight: 500;
+      width: 100%;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .status-indicator.loading {
+      background-color: #FFF9C4;
+      color: #F57F17;
+    }
+
+    .status-indicator.error {
+      background-color: #FFEBEE;
+      color: var(--color-error);
+    }
+
+    .status-indicator.ready {
+      background-color: #E8F5E9;
+      color: var(--color-success);
     }
 
     .camera-container {
@@ -77,16 +128,22 @@
       width: 100%;
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       background-color: #000;
       aspect-ratio: 4/3;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .camera-container:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     #webcam {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
     }
 
     #output-canvas {
@@ -99,18 +156,24 @@
 
     .detection-info {
       background: var(--color-light);
-      padding: 1rem;
+      padding: 1.25rem;
       border-radius: 8px;
-      margin-top: 1rem;
+      width: 100%;
+      border-left: 4px solid var(--color-primary);
+      transition: transform 0.2s ease;
+    }
+
+    .detection-info:hover {
+      transform: translateY(-2px);
     }
 
     .person-count {
       font-size: 1.25rem;
       color: var(--color-primary);
-      margin-bottom: 0.5rem;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
+      font-weight: 500;
     }
 
     .detection-status {
@@ -118,87 +181,82 @@
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background-color: #dc3545;
-    }
-
-    .detection-status.active {
-      background-color: #28a745;
-    }
-
-    .mango-section {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .image-slider {
+      background-color: var(--color-error);
       position: relative;
-      width: 100%;
-      height: 300px;
-      overflow: hidden;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-    }
-
-    .slider-images {
-      display: flex;
-      transition: transform 0.5s ease-in-out;
-      height: 100%;
-    }
-
-    .slider-images img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-
-    .slider-nav {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-
-    .slider-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: var(--color-accent);
-      cursor: pointer;
       transition: background-color 0.3s ease;
     }
 
-    .slider-dot.active {
-      background-color: var(--color-primary);
+    .detection-status.active {
+      background-color: var(--color-success);
     }
 
-    .mango-description {
-      line-height: 1.6;
-      color: var(--color-text);
+    .detection-status.active::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-color: var(--color-success);
+      opacity: 0.5;
+      animation: pulse 1.5s infinite;
     }
 
-    .status-indicator {
-      background-color: var(--color-accent);
-      color: var(--color-dark);
-      padding: 0.5rem;
-      border-radius: 4px;
-      margin-bottom: 1rem;
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.7;
+      }
+      70% {
+        transform: scale(1.8);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
+
+    footer {
       text-align: center;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      color: var(--color-dark);
+      font-size: 0.9rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .camera-section {
+        padding: 1rem;
+      }
+    }
+
+    /* Accessibility focus styles */
+    button:focus-visible, 
+    a:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>MADHURAM MALABAR </h1>
-      <p class="tagline">Mango fest</p>
+      <h1>MADHURAM MALABAR</h1>
+      <p class="tagline">Mango Fest - Person Detection</p>
     </header>
 
     <main>
       <div class="camera-section">
-        <div class="status-indicator" id="status-indicator">Initializing system...</div>
+        <div class="status-indicator loading" id="status-indicator">Initializing system...</div>
         <div class="camera-container">
           <video id="webcam" autoplay muted playsinline></video>
           <canvas id="output-canvas"></canvas>
@@ -211,208 +269,227 @@
         </div>
         <audio id="mangoAudio" src="mango-info.mp3"></audio>
       </div>
-
-      <div class="mango-section">
-        <div class="image-slider">
-          <div class="slider-images" id="slider-images">
-            <img src="https://images.pexels.com/photos/2363347/pexels-photo-2363347.jpeg" alt="Mango Tree">
-            <img src="https://images.pexels.com/photos/6157056/pexels-photo-6157056.jpeg" alt="Mango Fruits">
-            <img src="https://images.pexels.com/photos/918643/pexels-photo-918643.jpeg" alt="Mango Farm">
-          </div>
-        </div>
-        <div class="slider-nav" id="slider-nav"></div>
-        <div class="mango-description">
-          <h2>Alphonso Mango Tree</h2>
-          <p>The Alphonso mango tree is renowned for producing one of the most delicious and sought-after mango varieties in the world. These majestic trees can grow up to 30-40 feet tall and have a dense, rounded canopy that provides ample shade.</p>
-          <p>Key Features:</p>
-          <ul>
-            <li>Height: 30-40 feet when fully grown</li>
-            <li>Fruit Season: March to July</li>
-            <li>Fruit Color: Golden yellow when ripe</li>
-            <li>Nutritional Value: Rich in Vitamins A, C, and antioxidants</li>
-          </ul>
-        </div>
-      </div>
     </main>
+
+    <footer>
+      &copy; 2025 Madhuram Malabar | Mango Fest
+    </footer>
   </div>
 
   <script>
-    class ImageSlider {
-      constructor() {
-        this.currentSlide = 0;
-        this.sliderImages = document.getElementById('slider-images');
-        this.images = this.sliderImages.getElementsByTagName('img');
-        this.createNavDots();
-        this.startAutoSlide();
-      }
-
-      createNavDots() {
-        const nav = document.getElementById('slider-nav');
-        for (let i = 0; i < this.images.length; i++) {
-          const dot = document.createElement('div');
-          dot.className = `slider-dot ${i === 0 ? 'active' : ''}`;
-          dot.addEventListener('click', () => this.goToSlide(i));
-          nav.appendChild(dot);
-        }
-      }
-
-      goToSlide(index) {
-        this.currentSlide = index;
-        this.sliderImages.style.transform = `translateX(-${index * 100}%)`;
-        this.updateDots();
-      }
-
-      updateDots() {
-        const dots = document.getElementsByClassName('slider-dot');
-        Array.from(dots).forEach((dot, index) => {
-          dot.classList.toggle('active', index === this.currentSlide);
-        });
-      }
-
-      nextSlide() {
-        this.currentSlide = (this.currentSlide + 1) % this.images.length;
-        this.goToSlide(this.currentSlide);
-      }
-
-      startAutoSlide() {
-        setInterval(() => this.nextSlide(), 5000);
-      }
-    }
-
     class PersonDetector {
       constructor() {
         this.video = document.getElementById('webcam');
         this.canvas = document.getElementById('output-canvas');
         this.ctx = this.canvas.getContext('2d');
+        this.statusIndicator = document.getElementById('status-indicator');
+        this.personCountElement = document.getElementById('person-count');
+        this.detectionStatusElement = document.getElementById('detection-status');
+        this.audio = document.getElementById('mangoAudio');
+        
         this.model = null;
         this.isRunning = false;
         this.personCount = 0;
         this.lastPersonCount = 0;
         this.audioPlaying = false;
-        this.audio = document.getElementById('mangoAudio');
         
         // Add event listener for audio ended
         this.audio.addEventListener('ended', () => {
           this.audioPlaying = false;
+          console.log('Audio playback finished');
+        });
+
+        // Handle errors for audio playback
+        this.audio.addEventListener('error', (e) => {
+          console.error('Audio error:', e);
+          this.updateStatus('Audio error: ' + (e.message || 'Failed to load audio'), 'error');
         });
       }
 
       async initialize() {
         try {
-          this.updateStatus('Loading AI model...');
+          this.updateStatus('Loading AI model...', 'loading');
+          
+          // Load COCO-SSD model
           this.model = await cocoSsd.load();
+          this.updateStatus('AI model loaded. Setting up camera...', 'loading');
+          
+          // Set up the camera
           await this.setupCamera();
+          
+          // Start detection
           this.startDetection();
           return true;
         } catch (error) {
           console.error('Error initializing:', error);
-          this.updateStatus('Error: ' + error.message);
+          this.updateStatus('Error: ' + error.message, 'error');
           return false;
         }
       }
 
       async setupCamera() {
-        this.updateStatus('Requesting camera access...');
-        
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' },
-          audio: false
-        });
-        
-        this.video.srcObject = stream;
-        
-        return new Promise((resolve) => {
-          this.video.onloadedmetadata = () => {
-            this.canvas.width = this.video.videoWidth;
-            this.canvas.height = this.video.videoHeight;
-            this.updateStatus('System Ready');
-            resolve();
-          };
-        });
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+            audio: false
+          });
+          
+          this.video.srcObject = stream;
+          
+          return new Promise((resolve) => {
+            this.video.onloadedmetadata = () => {
+              this.canvas.width = this.video.videoWidth;
+              this.canvas.height = this.video.videoHeight;
+              this.updateStatus('System Ready', 'ready');
+              resolve();
+            };
+          });
+        } catch (error) {
+          console.error('Camera setup error:', error);
+          this.updateStatus('Camera access denied or not available', 'error');
+          throw error;
+        }
       }
 
       startDetection() {
         if (this.isRunning) return;
+        
         this.isRunning = true;
         this.detectFrame();
+        console.log('Person detection started');
       }
 
       async detectFrame() {
         if (!this.isRunning) return;
         
         try {
+          // Detect objects in the video frame
           const predictions = await this.model.detect(this.video);
+          
+          // Clear previous drawings
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
           
+          // Count people
           this.personCount = predictions.filter(pred => pred.class === 'person').length;
+          
+          // Update the UI
           this.updatePersonCount(this.personCount);
           
+          // Draw bounding boxes around detected people
           predictions.forEach(prediction => {
             if (prediction.class === 'person') {
-              this.drawBoundingBox(prediction.bbox);
+              this.drawBoundingBox(prediction.bbox, prediction.score);
             }
           });
 
+          // Play audio if new person detected
           if (this.personCount > 0 && !this.audioPlaying && this.personCount !== this.lastPersonCount) {
             this.playMangoInfo();
           }
           
+          // Store current count for next comparison
           this.lastPersonCount = this.personCount;
+          
+          // Continue detection loop
           requestAnimationFrame(() => this.detectFrame());
         } catch (error) {
           console.error('Detection error:', error);
-          this.updateStatus('Detection error');
+          this.updateStatus('Detection error: ' + error.message, 'error');
+          
+          // Try to recover after a delay
           setTimeout(() => this.detectFrame(), 1000);
         }
       }
 
-      drawBoundingBox(bbox) {
+      drawBoundingBox(bbox, score) {
         const [x, y, width, height] = bbox;
         
+        // Draw a semi-transparent fill
+        this.ctx.fillStyle = 'rgba(46, 125, 50, 0.2)';
+        this.ctx.fillRect(x, y, width, height);
+        
+        // Draw the boundary box
         this.ctx.strokeStyle = '#2E7D32';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(x, y, width, height);
         
-        this.ctx.fillStyle = 'rgba(46, 125, 50, 0.2)';
-        this.ctx.fillRect(x, y, width, height);
+        // Draw label with confidence score
+        const confidencePercentage = (score * 100).toFixed(0);
+        this.ctx.fillStyle = 'rgba(46, 125, 50, 0.85)';
+        this.ctx.fillRect(x, y - 20, 120, 20);
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '14px sans-serif';
+        this.ctx.fillText(`Person ${confidencePercentage}%`, x + 5, y - 5);
       }
 
-      updateStatus(message) {
-        const statusElement = document.getElementById('status-indicator');
-        if (statusElement) {
-          statusElement.textContent = message;
+      updateStatus(message, state) {
+        if (this.statusIndicator) {
+          this.statusIndicator.textContent = message;
+          
+          // Reset all state classes
+          this.statusIndicator.classList.remove('loading', 'error', 'ready');
+          
+          // Add the appropriate state class
+          if (state) {
+            this.statusIndicator.classList.add(state);
+          }
         }
       }
 
       updatePersonCount(count) {
-        const countElement = document.getElementById('person-count');
-        const statusElement = document.getElementById('detection-status');
-        
-        if (countElement) {
-          countElement.textContent = count > 0 ? `People detected: ${count}` : 'No person detected';
+        if (this.personCountElement) {
+          this.personCountElement.textContent = count > 0 
+            ? `People detected: ${count}` 
+            : 'No person detected';
         }
         
-        if (statusElement) {
-          statusElement.classList.toggle('active', count > 0);
+        if (this.detectionStatusElement) {
+          this.detectionStatusElement.classList.toggle('active', count > 0);
         }
       }
 
       playMangoInfo() {
         if (this.audioPlaying) return;
         
+        console.log('Playing mango info audio');
         this.audioPlaying = true;
-        this.audio.currentTime = 0; // Reset audio to start
+        
+        // Reset audio to start
+        this.audio.currentTime = 0;
+        
+        // Play the audio
         this.audio.play().catch(error => {
           console.error('Error playing audio:', error);
           this.audioPlaying = false;
         });
       }
+
+      stop() {
+        this.isRunning = false;
+        
+        // Stop the video stream
+        if (this.video.srcObject) {
+          const tracks = this.video.srcObject.getTracks();
+          tracks.forEach(track => track.stop());
+          this.video.srcObject = null;
+        }
+        
+        console.log('Person detection stopped');
+      }
     }
 
+    // Initialize when the page loads
     document.addEventListener('DOMContentLoaded', async () => {
       const detector = new PersonDetector();
-      const slider = new ImageSlider();
       await detector.initialize();
+      
+      // Add listener for page unload to clean up resources
+      window.addEventListener('beforeunload', () => {
+        detector.stop();
+      });
+
+      // Fallback instructions in case audio file is missing
+      console.log("Note: This application requires an audio file named 'mango-info.mp3' to play when people are detected.");
     });
   </script>
 </body>
